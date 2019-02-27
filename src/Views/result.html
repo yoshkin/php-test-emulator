@@ -1,0 +1,22 @@
+<table class="table mt-3" id="result">
+    <thead class="thead-light">
+    <tr>
+        <th scope="col">#</th>
+        <th scope="col">ID</th>
+        <th scope="col">Встречался</th>
+        <th scope="col">Сложность вопроса</th>
+        <th scope="col">Дан верный ответ</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for item in questions %}
+    <tr>
+        <th scope="row">{{ item['number'] }}</th>
+        <td>{{ item['question_id'] }}</td>
+        <td>{{ item['question_used_counter'] }}</td>
+        <td>{{ item['difficulty'] }}</td>
+        <td>{{ (item['result']) ? 'Да' : 'Нет' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>

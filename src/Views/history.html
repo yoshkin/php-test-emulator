@@ -1,0 +1,20 @@
+<table id="history-table" class="table mt-3">
+    <thead class="thead-light">
+    <tr class="header">
+        <th scope="col">#</th>
+        <th scope="col">Интеллект тестируемого</th>
+        <th scope="col">Диапазон сложности вопросов</th>
+        <th scope="col">Результат тестирования</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for item in data %}
+    <tr>
+        <th scope="row">{{ item['number'] }}</th>
+        <td>{{ item['intellect'] }}</td>
+        <td>{{ item['difficulty'] }}</td>
+        <td>{{ item['result']['summ'] }} из {{ item['result']['counter'] }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <title>Тестовое задание</title>
+</head>
+<body>
+
+<div class="container">
+    <div class="row justify-content-md-center">
+        <div class="col-md-auto">
+            <h1>Эмулятор проведения тестов</h1>
+            <ul class="nav nav-tabs" id="myTab" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="settings-tab" data-toggle="tab" href="#settings" role="tab" aria-controls="settings" aria-selected="true">Настройки</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="emulator-tab" data-toggle="tab" href="#emulator" role="tab" aria-controls="emulator" aria-selected="false">Эмулятор</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="history-tab" data-toggle="tab" href="#history" role="tab" aria-controls="contact" aria-selected="false">История результатов</a>
+                </li>
+            </ul>
+            <div class="tab-content" id="myTabContent">
+                <div class="tab-pane fade show active" id="settings" role="tabpanel" aria-labelledby="settings-tab">
+                    <form class="mt-3 mb-5" name="settings" action="/ajax/save-settings" method="post">
+                        <b>Сложность вопросов:</b>
+                        <div class="form-group row mt-3">
+                            <label for="min" class="col-sm-1 col-form-label">От: </label>
+                            <div class="col-sm-3">
+                                <input type="number" name="min" class="form-control" value="0">
+                            </div>
+                            <label for="max" class="col-sm-1 col-form-label">До: </label>
+                            <div class="col-sm-3">
+                                <input type="number" name="max" class="form-control" value="100">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Сохранить</button>
+                    </form>
+                    <div class="alert" role="alert"></div>
+                </div>
+
+                <div class="tab-pane fade" id="emulator" role="tabpanel" aria-labelledby="profile-tab">
+                    <form class="mt-3 mb-5" name="emulator" action="/ajax/run-emulator" method="post">
+                        <b>Уровень интеллекта респондента:</b>
+                        <div class="form-group row mt-3">
+                            <label for="min" class="col-sm-1 col-form-label">От: </label>
+                            <div class="col-sm-3">
+                                <input type="number" name="min" class="form-control" value="0">
+                            </div>
+                            <label for="max" class="col-sm-1 col-form-label">До: </label>
+                            <div class="col-sm-3">
+                                <input type="number" name="max" class="form-control" value="100">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Запуcтить тест</button>
+                    </form>
+                    <div class="alert" role="alert"></div>
+                    <div id="result-table"></div>
+                </div>
+                <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="js/jquery.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/notify.min.js"></script>
+<script src="js/custom.js"></script>
+</body>
+</html>
