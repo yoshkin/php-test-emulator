@@ -38,3 +38,4 @@
 1) ```cp .env.example .env```
 2) Update your DB setting in just created .env file 
 3) Create your DB by using migration.sql
+4) If you are using shared hosting - create symlink to "public" directory 
