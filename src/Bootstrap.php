@@ -7,6 +7,8 @@ use AYashenkov\Database\DB;
 use FastRoute\RouteCollector;
 use FastRoute\Dispatcher;
 
+$dotenv = \Dotenv\Dotenv::create(__DIR__ . '/../');
+$dotenv->load();
 //Test DB connection
 DB::instance();
 

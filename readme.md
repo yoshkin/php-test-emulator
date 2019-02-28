@@ -29,9 +29,12 @@
 
 ``` cd php-test-emulator ```
 
+``` composer install ```
+
 ``` composer update ```
 
 ## Configuration
 
-1) Update your DB setting in Config.php
-2) Create your DB by using migration.sql
+1) ```cp .env.example .env```
+2) Update your DB setting in just created .env file 
+3) Create your DB by using migration.sql

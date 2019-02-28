@@ -16,9 +16,7 @@ class DB
         if (self::$instance === null) {
             try {
                 self::$instance = new \PDO(
-                    'mysql:host=' . Config::DB_HOST . ';dbname=' . Config::DB_NAME,
-                    Config::DB_USER,
-                    Config::DB_PASS
+                    'mysql:host=' . $_ENV['DB_HOST'] . ';dbname=' . $_ENV['DB_NAME'], $_ENV['DB_USER'], $_ENV['DB_PASS']
                 );
                 self::$instance->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
             }

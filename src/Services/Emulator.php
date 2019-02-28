@@ -6,7 +6,6 @@ use AYashenkov\Database\DB;
 
 class Emulator
 {
-
     /**
      * Сохраняем новый тест в таблице тестов
      * @param $range
@@ -41,7 +40,6 @@ class Emulator
             'success' => true,
             'data' => $history);
     }
-
 
     /**
      * Запуск эмулятора тестов
@@ -130,7 +128,6 @@ class Emulator
             );
         }
     }
-
 
     /**
      * Получаем случайный вопрос, ответ участника теста и сложность вопроса
