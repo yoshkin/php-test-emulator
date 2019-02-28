@@ -6,11 +6,11 @@ $(function() {
     });
 
     $('form').submit(function() {
-        var el = $(this);
-        var button = el.find('[type="submit"]'),
-            range_min = el.find('input[name="min"]'),
-            range_max = el.find('input[name="max"]'),
-            notification = el.parent().find('.alert');
+        var form = $(this);
+        var button = form.find('[type="submit"]'),
+            range_min = form.find('input[name="min"]'),
+            range_max = form.find('input[name="max"]'),
+            notification = form.parent().find('.alert');
 
         button.addClass('disabled');
 
@@ -18,7 +18,8 @@ $(function() {
             min: range_min.val(),
             max: range_max.val()
         };
-        $.post(el.attr('action'), params).done(function(data) {
+        $.post(form.attr('action'), params)
+            .done(function(data) {
             var response = JSON.parse(data);
             if (response.success === true) {
                 range_min.val(response.data.range.min);

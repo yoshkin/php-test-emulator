@@ -9,6 +9,7 @@ use FastRoute\Dispatcher;
 
 $dotenv = \Dotenv\Dotenv::create(__DIR__ . '/../');
 $dotenv->load();
+$dotenv->required(['DB_HOST','DB_NAME','DB_USER','DB_PASS']);
 //Test DB connection
 DB::instance();
 
