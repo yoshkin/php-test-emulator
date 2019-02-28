@@ -8,8 +8,8 @@ class AjaxController extends BaseController
      */
     public function saveSettings()
     {
-        $data = $this->service->saveSettings($this->request->getBodyParameters());
-        $content = $this->json($data);
+        $range = $this->validateRange($this->request->getBodyParameters());
+        $content = $this->json($this->service->saveSettings($range));
         $this->response->setContent($content);
     }
 
@@ -22,12 +22,16 @@ class AjaxController extends BaseController
         $this->response->setContent($content);
     }
 
+    /**
+     * Run test emulator
+     */
     public function runEmulator()
     {
-        $data = $this->service->runEmulator($this->request->getBodyParameters());
+        $range = $this->validateRange($this->request->getBodyParameters());
+        $data = $this->service->runEmulator($range);
+
         $html = $this->renderer->render('result.html', $data['data']);
         $data['data']['questions'] = $html;
-
         $content = $this->json($data);
         $this->response->setContent($content);
     }

@@ -9,46 +9,25 @@ class Emulator
 
     /**
      * Сохраняем новый тест в таблице тестов
-     * @param $data
+     * @param $range
      * @return array
      */
-    public function saveSettings($data)
+    public function saveSettings($range)
     {
-        try {
-            $range = $this->validateRange($data);
-            if (!$range) {
-                throw new \LogicException('Сложность вопроса не корректна (допустимо от 0 до 100)');
-            }
+        /**
+         * Проверяем, есть ли результаты тестирования для последнего теста,
+         * если нет, то новый не создаем, а обновляем существующий
+         */
+        $test = $this->getLastTestWithoutResults();
+        $this->updateOrCreateTest($range, $test);
 
-            /**
-             * Проверяем, есть ли результаты тестирования для последнего теста,
-             * если нет, то новый не создаем, а обновляем существующий
-             */
-            $test = DB::q("SELECT id FROM tests t 
-                  LEFT JOIN results r ON r.test_id = t.id 
-                  WHERE r.test_id IS NULL ORDER BY id DESC LIMIT 1")
-                ->fetch();
-
-            $range_query = (string)($range['min'] . '-' . $range['max']);
-            if (empty($test['id'])) {
-                DB::x('INSERT INTO tests SET difficulty = ?s', $range_query);
-            } else {
-                DB::x('UPDATE tests SET difficulty = ?s WHERE id = ?i', $range_query, $test['id']);
-            }
-
-            return array(
-                'success' => true,
-                'data' => array(
-                    'range' => $range,
-                    'message' => 'Настройки успешно сохранены, теперь вы можете запустить эмулятор теста.'
-                )
-            );
-        } catch (\LogicException $e) {
-            return array(
-                'success' => false,
-                'data' => $e->getMessage()
-            );
-        }
+        return array(
+            'success' => true,
+            'data' => array(
+                'range' => $range,
+                'message' => 'Настройки успешно сохранены, теперь вы можете запустить эмулятор теста.'
+            )
+        );
     }
 
     /**
@@ -66,24 +45,17 @@ class Emulator
 
     /**
      * Запуск эмулятора тестов
-     * @param $data
+     * @param $intellect
      * @return array
      */
-    public function runEmulator($data)
+    public function runEmulator($intellect)
     {
         try {
-            /**
-             * Валидация входящих параметров
-             */
-            $intellect = $this->validateRange($data);
-            if (!$intellect) {
-                throw new \LogicException('Уровень интеллекта участника введен не корректно (допустимо от 0 до 100)');
-            }
-
+            DB::beginTransaction();
             /**
              * Проверяем, сохранены ли настройки теста
              */
-            $test = DB::q("SELECT * FROM tests ORDER BY id DESC LIMIT 1")->fetch();
+            $test = $this->getLastCreatedTest();
             if (!$test) {
                 throw new \LogicException('Перед запуском эмулятора, нужно сохранить настройки теста');
             }
@@ -91,9 +63,7 @@ class Emulator
             /**
              * Новый участник
              */
-            $range_sql = (string)($intellect['min'] . '-' . $intellect['max']);
-            DB::x('INSERT INTO persons SET intellect = ?s', $range_sql);
-            $person_id = DB::lastInsertId();
+            $person_id = $this->createNewPerson($intellect);
 
             /**
              * Сложность теста
@@ -103,32 +73,25 @@ class Emulator
             /**
              * Максимальное количество использования вопроса
              */
-            $max_used = DB::q("SELECT max(question_used_counter) as max_used FROM questions")->fetch();
-            $max_used = $max_used['max_used']+1;
+            $max_used = $this->getMaxUsed();
 
             /**
              * Все вопросы
+             * Формируем диапазон по частоте использования и добавляем в массив $questions_array
+             * Если редко использовался, то диапазон будет выше
              */
-            $qu_max = 0;
-            $questions_array = array();
-            $questions = DB::q("SELECT * FROM questions")->fetchAll();
-            foreach ($questions as $question) {
-                // Формируем диапазон по частоте использования и добавляем в массив $questions_array
-                $qu_min = $qu_max+1;
-                $qu_max = $qu_min+floor($max_used/($question['question_used_counter']+1)); // Диапазон будет выше у реже используемых
-                $questions_array[$question['id']] = array(
-                    'qu_min' => $qu_min,
-                    'qu_max' => $qu_max,
-                    'question_used_counter' => $question['question_used_counter']
-                );
-            }
+            list($qu_max, $questions_array) = $this->generateQuestionsArray($max_used);
 
+            /**
+             * Логика эмулятора
+             */
             $random_qu = array();
-            // Эмулируем 40 вопросов
             for ($i=1; $i<=40; $i++) {
-                // Получаем случайный вопрос с результатом ответа и массив оставшихся вопросов
+                /**
+                 * Получаем случайный вопрос с результатом ответа и массив оставшихся вопросов
+                 * Результаты ответа добаляем в массив $random_qu
+                 */
                 $random = $this->getRandomData($questions_array, $qu_max, $difficulty, $intellect);
-                // Результаты ответа добаляем в массив $random_qu
                 $random_qu[] = array(
                     'number' => $i,
                     'question_id' => $random['qu_rand'],
@@ -136,11 +99,14 @@ class Emulator
                     'difficulty' => $random['difficulty'],
                     'question_used_counter' => $random['question_used_counter']
                 );
-
-                DB::x('UPDATE questions SET question_used_counter = question_used_counter+1 WHERE id = ?i', (int)$random['qu_rand']);
-
-                DB::x('INSERT INTO results SET test_id = ?i, question_id = ?i, person_id = ?i, result = ?i',
-                    (int)$test['id'], (int)$random['qu_rand'], (int)$person_id, (int)$random['result']);
+                /**
+                 * Обновляем счетчик использования вопроса
+                 */
+                $this->updateQuestionsUsedCounter($random);
+                /**
+                 * Сохраняем результаты теста
+                 */
+                $this->createTestResults($test, $random, $person_id);
 
                 if (empty($random['questions'])) {
                     break;
@@ -148,6 +114,7 @@ class Emulator
                 $questions_array = $random['questions'];
                 $qu_max = $random['qu_max'];
             }
+            DB::commit();
             return array(
                 'success' => true,
                 'data' => array(
@@ -156,6 +123,7 @@ class Emulator
                 )
             );
         } catch (\LogicException $e) {
+            DB::rollBack();
             return array(
                 'success' => false,
                 'data' => $e->getMessage()
@@ -222,23 +190,6 @@ class Emulator
         );
     }
 
-
-    /**
-     * Валидация диапазона (min - max)
-     * @param $range
-     * @return array|bool
-     */
-    protected function validateRange($range)
-    {
-        $min = isset($range['min']) ? (int)$range['min'] : 0;
-        $max = isset($range['max']) ? (int)$range['max'] : 0;
-
-        if ($min <= $max && $min >= 0 && $max <= 100) {
-            return array('min' => $min, 'max' => $max);
-        }
-        return false;
-    }
-
     /**
      * Формируем массив с историей тестов
      * @param $history
@@ -277,5 +228,107 @@ class Emulator
             'max' => $difficulty[1]
         );
         return $difficulty;
+    }
+
+    /**
+     * Проверяем, сохранены ли настройки теста
+     * @return mixed
+     */
+    protected function getLastCreatedTest()
+    {
+        $test = DB::q("SELECT * FROM tests ORDER BY id DESC LIMIT 1")->fetch();
+        return $test;
+    }
+
+    /**
+     * Новый участник
+     * @param $intellect
+     * @return string
+     */
+    protected function createNewPerson($intellect)
+    {
+        $range_sql = (string)($intellect['min'] . '-' . $intellect['max']);
+        DB::x('INSERT INTO persons SET intellect = ?s', $range_sql);
+        return DB::lastInsertId();
+    }
+
+    /**
+     * Получаем тест без результатов
+     * @return mixed
+     */
+    protected function getLastTestWithoutResults()
+    {
+        $test = DB::q("SELECT id FROM tests t 
+                  LEFT JOIN results r ON r.test_id = t.id 
+                  WHERE r.test_id IS NULL ORDER BY id DESC LIMIT 1")
+            ->fetch();
+        return $test;
+    }
+
+    /**
+     * Обновляем или создаем новый тест с настройками сложности
+     * @param $range
+     * @param $test
+     */
+    protected function updateOrCreateTest($range, $test)
+    {
+        $range_query = (string)($range['min'] . '-' . $range['max']);
+        if (empty($test['id'])) {
+            DB::x('INSERT INTO tests SET difficulty = ?s', $range_query);
+        } else {
+            DB::x('UPDATE tests SET difficulty = ?s WHERE id = ?i', $range_query, $test['id']);
+        }
+    }
+
+    /**
+     * @return int|mixed
+     */
+    protected function getMaxUsed()
+    {
+        $max_used = DB::q("SELECT max(question_used_counter) as max_used FROM questions")->fetch();
+        $max_used = $max_used['max_used'] + 1;
+        return $max_used;
+    }
+
+    /**
+     * Обновляем счетчик использования вопроса
+     * @param $random
+     */
+    protected function updateQuestionsUsedCounter($random)
+    {
+        DB::x('UPDATE questions SET question_used_counter = question_used_counter+1 WHERE id = ?i', (int)$random['qu_rand']);
+    }
+
+    /**
+     * Сохраняем результаты теста
+     * @param $test
+     * @param $random
+     * @param $person_id
+     */
+    protected function createTestResults($test, $random, $person_id)
+    {
+        DB::x('INSERT INTO results SET test_id = ?i, question_id = ?i, person_id = ?i, result = ?i',
+            (int)$test['id'], (int)$random['qu_rand'], (int)$person_id, (int)$random['result']);
+    }
+
+    /**
+     * @param $max_used
+     * @return array
+     */
+    protected function generateQuestionsArray($max_used)
+    {
+        $qu_max = 0;
+        $questions_array = array();
+        $questions = DB::q("SELECT * FROM questions")->fetchAll();
+        foreach ($questions as $question) {
+            $qu_min = $qu_max + 1;
+            $qu_max = $qu_min + floor($max_used / ($question['question_used_counter'] + 1));
+            $questions_array[$question['id']] = array(
+                'qu_min' => $qu_min,
+                'qu_max' => $qu_max,
+                'question_used_counter' => $question['question_used_counter']
+            );
+        }
+        return array($qu_max, $questions_array);
     }
 }

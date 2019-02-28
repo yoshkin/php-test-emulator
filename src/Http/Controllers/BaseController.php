@@ -40,6 +40,11 @@ class BaseController
         $this->renderer = $renderer;
     }
 
+    /**
+     * Return Json Response
+     * @param $result
+     * @return string
+     */
     protected function json($result)
     {
         return json_encode(
@@ -48,5 +53,30 @@ class BaseController
                 'data' => $result['data']
             )
         );
+    }
+
+
+    /**
+     * Валидация диапазона (min - max)
+     * @param $range
+     * @return array
+     */
+    protected function validateRange($range)
+    {
+        try {
+            $min = isset($range['min']) ? (int)$range['min'] : 0;
+            $max = isset($range['max']) ? (int)$range['max'] : 0;
+
+            if ($min <= $max && $min >= 0 && $max <= 100) {
+                return array('min' => $min, 'max' => $max);
+            } else {
+                throw new \LogicException('Допустимы значения от 0 до 100');
+            }
+        } catch (\LogicException $e) {
+            return array(
+                'success' => false,
+                'data' => $e->getMessage()
+            );
+        }
     }
 }
